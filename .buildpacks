@@ -1,0 +1,7 @@
+# Overrides for Python detection
+
+- language: nodejs
+- detection: nodejs:
+
+## For more details:
+## https://buildpacks.io/docs/language-family/nodejs
