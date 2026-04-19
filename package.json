@@ -1,1 +1,12 @@
-{\n  "name": "your-package-name",\n  "version": "1.0.0",\n  "description": "A brief description of your package",\n  "main": "index.js",\n  "scripts": {\n    "start": "node index.js",\n    "heroku-postbuild": "npm install"\n  },\n  "engines": {\n    "node": ">=20.0.0",\n    "npm": ">=10.0.0"\n  },\n  "dependencies": {}\n}
+{
+  "name": "wa-bot",
+  "version": "1.0.0",
+  "main": "index.js",
+  "dependencies": {
+    "@whiskeysockets/baileys": "^6.7.8",
+    "pino": "^8.0.0"
+  },
+  "scripts": {
+    "start": "node index.js"
+  }
+}
