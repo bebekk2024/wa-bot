@@ -1,4 +1,9 @@
-const { default: makeWASocket, useMultiFileAuthState, DisconnectReason } = require('@whiskeysockets/baileys');
+const {
+  default: makeWASocket,
+  useMultiFileAuthState,
+  DisconnectReason
+} = require('@whiskeysockets/baileys');
+
 const P = require('pino');
 
 async function startBot() {
@@ -11,23 +16,31 @@ async function startBot() {
 
   sock.ev.on('creds.update', saveCreds);
 
-  // 🔥 INI YANG BENAR UNTUK QR
+  // 🔥 QR + CONNECTION HANDLER
   sock.ev.on('connection.update', (update) => {
-    const { connection, qr } = update;
+    const { connection, lastDisconnect, qr } = update;
 
     if (qr) {
-      console.log('==============================');
-      console.log('SCAN QR INI DI WHATSAPP 👇');
+      console.log('SCAN QR INI 👇');
       console.log(qr);
-      console.log('==============================');
+    }
+
+    if (connection === 'close') {
+      const reason = lastDisconnect?.error?.output?.statusCode;
+
+      console.log('❌ Connection closed, reason:', reason);
+
+      // 🔥 AUTO RECONNECT
+      if (reason !== DisconnectReason.loggedOut) {
+        console.log('♻️ Reconnecting...');
+        startBot();
+      } else {
+        console.log('⚠️ Logged out, delete session dan scan ulang');
+      }
     }
 
     if (connection === 'open') {
       console.log('✅ WhatsApp CONNECTED');
-    }
-
-    if (connection === 'close') {
-      console.log('❌ Connection closed');
     }
   });
 
@@ -54,3 +67,7 @@ async function startBot() {
 }
 
 startBot();
+
+// 🔥 ANTI CRASH NODE
+process.on('uncaughtException', console.log);
+process.on('unhandledRejection', console.log);
