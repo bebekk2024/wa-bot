@@ -10,56 +10,67 @@ const P = require('pino');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// 🔥 KEEP ALIVE SERVER HEROKU
+// KEEP ALIVE HEROKU
 app.get('/', (req, res) => {
-  res.send('WhatsApp Bot Active 🚀');
+  res.send('Bot WA aktif 🚀');
 });
 
 app.listen(PORT, () => {
   console.log('Server running on port', PORT);
 });
 
-// ===== WHATSAPP BOT =====
+let reconnectAttempt = 0;
+
 async function startBot() {
   const { state, saveCreds } = await useMultiFileAuthState('session');
 
   const sock = makeWASocket({
     auth: state,
-    logger: P({ level: 'silent' })
+    logger: P({ level: 'silent' }),
+    connectTimeoutMs: 60000
   });
 
   sock.ev.on('creds.update', saveCreds);
 
-  // 🔥 CONNECTION HANDLER (PENTING)
   sock.ev.on('connection.update', (update) => {
     const { connection, qr, lastDisconnect } = update;
 
     if (qr) {
-      console.log('======================');
       console.log('SCAN QR INI 👇');
       console.log(qr);
-      console.log('======================');
     }
 
     if (connection === 'open') {
-      console.log('✅ WhatsApp CONNECTED');
+      console.log('✅ CONNECTED SUCCESS');
+      reconnectAttempt = 0;
     }
 
     if (connection === 'close') {
       const reason = lastDisconnect?.error?.output?.statusCode;
 
-      console.log('❌ Connection closed:', reason);
+      console.log('❌ Closed reason:', reason);
 
-      // 🔥 AUTO RECONNECT
-      if (reason !== DisconnectReason.loggedOut) {
-        startBot();
-      } else {
-        console.log('⚠️ Logout, hapus session & scan ulang');
+      // 🚫 STOP kalau logout permanen
+      if (reason === DisconnectReason.loggedOut) {
+        console.log('⚠️ Logged out. Hapus session & scan ulang');
+        return;
       }
+
+      // 🔥 ANTI SPAM RECONNECT (INI PENTING UNTUK FIX 405)
+      reconnectAttempt++;
+
+      if (reconnectAttempt > 3) {
+        console.log('🚫 Too many retries. STOP to avoid 405 block.');
+        return;
+      }
+
+      console.log('♻️ Reconnect delay 10 detik...');
+      setTimeout(() => {
+        startBot();
+      }, 10000);
     }
   });
 
-  // 💬 AUTO REPLY
   sock.ev.on('messages.upsert', async ({ messages }) => {
     const msg = messages[0];
     if (!msg.message || msg.key.fromMe) return;
@@ -84,6 +95,6 @@ async function startBot() {
 
 startBot();
 
-// 🔥 ANTI CRASH
+// ANTI CRASH NODE
 process.on('uncaughtException', console.log);
 process.on('unhandledRejection', console.log);
