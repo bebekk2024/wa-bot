@@ -1,7 +1,0 @@
-.slugignore
-# Ignore Python-related files
-*.pyc
-*.pyo
-__pycache__/
-# Force Node.js detection
-.buildpacks
