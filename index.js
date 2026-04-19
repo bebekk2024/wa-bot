@@ -1,3 +1,4 @@
+const express = require('express');
 const {
   default: makeWASocket,
   useMultiFileAuthState,
@@ -6,6 +7,19 @@ const {
 
 const P = require('pino');
 
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+// 🔥 KEEP ALIVE SERVER HEROKU
+app.get('/', (req, res) => {
+  res.send('WhatsApp Bot Active 🚀');
+});
+
+app.listen(PORT, () => {
+  console.log('Server running on port', PORT);
+});
+
+// ===== WHATSAPP BOT =====
 async function startBot() {
   const { state, saveCreds } = await useMultiFileAuthState('session');
 
@@ -16,34 +30,36 @@ async function startBot() {
 
   sock.ev.on('creds.update', saveCreds);
 
-  // 🔥 QR + CONNECTION HANDLER
+  // 🔥 CONNECTION HANDLER (PENTING)
   sock.ev.on('connection.update', (update) => {
-    const { connection, lastDisconnect, qr } = update;
+    const { connection, qr, lastDisconnect } = update;
 
     if (qr) {
+      console.log('======================');
       console.log('SCAN QR INI 👇');
       console.log(qr);
-    }
-
-    if (connection === 'close') {
-      const reason = lastDisconnect?.error?.output?.statusCode;
-
-      console.log('❌ Connection closed, reason:', reason);
-
-      // 🔥 AUTO RECONNECT
-      if (reason !== DisconnectReason.loggedOut) {
-        console.log('♻️ Reconnecting...');
-        startBot();
-      } else {
-        console.log('⚠️ Logged out, delete session dan scan ulang');
-      }
+      console.log('======================');
     }
 
     if (connection === 'open') {
       console.log('✅ WhatsApp CONNECTED');
     }
+
+    if (connection === 'close') {
+      const reason = lastDisconnect?.error?.output?.statusCode;
+
+      console.log('❌ Connection closed:', reason);
+
+      // 🔥 AUTO RECONNECT
+      if (reason !== DisconnectReason.loggedOut) {
+        startBot();
+      } else {
+        console.log('⚠️ Logout, hapus session & scan ulang');
+      }
+    }
   });
 
+  // 💬 AUTO REPLY
   sock.ev.on('messages.upsert', async ({ messages }) => {
     const msg = messages[0];
     if (!msg.message || msg.key.fromMe) return;
@@ -68,6 +84,6 @@ async function startBot() {
 
 startBot();
 
-// 🔥 ANTI CRASH NODE
+// 🔥 ANTI CRASH
 process.on('uncaughtException', console.log);
 process.on('unhandledRejection', console.log);
